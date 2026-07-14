@@ -179,7 +179,7 @@
                 const raw = _src.split(',')[1];
                 const mime = _src.match(/data:(.*?);/)[1];
                 
-                const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=`AQ.Ab8RN6KQ5_Tf2LdtC79hASJqHzINWbbiubj7pYV449tEJ_HfsA`, {
+                const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
