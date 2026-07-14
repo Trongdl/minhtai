@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MINH TAI - HỆ THỐNG AI BẢO MẬT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: system-ui, -apple-system, sans-serif; user-select: none; }
+        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .loader { border: 3px solid rgba(255, 255, 255, 0.1); border-left-color: #3b82f6; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .scan-anim { position: absolute; width: 100%; height: 2px; background: #3b82f6; box-shadow: 0 0 15px #3b82f6; top: 0; left: 0; animation: scan 2s infinite linear; display: none; }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+        #mainApp { display: none; }
+    </style>
+</head>
+<body oncontextmenu="return false;">
+
+    <!-- Security Login -->
+    <div id="loginScreen" class="fixed inset-0 z-[100] bg-[#0f172a] flex items-center justify-center p-4">
+        <div class="glass-panel p-8 rounded-2xl shadow-2xl w-full max-w-md border-t-4 border-blue-500">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-blue-600/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-blue-500/30">
+                    <i class="fas fa-user-shield text-3xl text-blue-500"></i>
+                </div>
+                <h1 class="text-3xl font-black tracking-tighter text-white">MINH TAI <span class="text-blue-500">AI</span></h1>
+                <p class="text-slate-400 text-sm mt-2">Hệ thống xử lý ảnh thẻ bảo mật cao</p>
+            </div>
+
+            <form id="authForm" class="space-y-5">
+                <div>
+                    <input type="text" id="u_name" class="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Tên đăng nhập" required autocomplete="off">
+                </div>
+                <div>
+                    <input type="password" id="u_pass" class="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="Mật khẩu" required>
+                </div>
+                <div id="err_msg" class="hidden text-red-400 text-xs text-center bg-red-500/10 py-2 rounded-lg">Thông tin đăng nhập không chính xác</div>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-600/20 transition-all transform active:scale-95">Đăng Nhập Hệ Thống</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Protected Main Interface -->
+    <div id="mainApp" class="min-h-screen flex flex-col">
+        <header class="glass-panel border-b border-slate-800 p-4 flex justify-between items-center sticky top-0 z-50">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 p-2 rounded-lg"><i class="fas fa-camera-retro"></i></div>
+                <span class="font-bold text-xl tracking-tight">MINH TAI <span class="text-blue-500">PRO</span></span>
+            </div>
+            <button id="logoutBtn" class="bg-slate-800 hover:bg-red-600 px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2">
+                <i class="fas fa-power-off"></i> <span class="hidden sm:inline">Đăng xuất</span>
+            </button>
+        </header>
+
+        <main class="flex-grow container mx-auto p-6 md:p-10 max-w-6xl">
+            <div class="text-center mb-10">
+                <h2 class="text-2xl font-bold mb-2">Tạo Ảnh Thẻ Công Sở</h2>
+                <p class="text-slate-400 text-sm">Hệ thống AI tự động thay trang phục chuyên nghiệp, giữ nguyên thần thái khuôn mặt.</p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                <!-- Nguồn -->
+                <div class="space-y-4">
+                    <div id="dropZone" class="glass-panel aspect-[3/4] rounded-3xl border-2 border-dashed border-slate-700 flex flex-col items-center justify-center cursor-pointer hover:border-blue-500 group transition-all relative overflow-hidden">
+                        <input type="file" id="fileInp" class="hidden" accept="image/*">
+                        <div id="upInfo" class="text-center z-10">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-slate-500 group-hover:text-blue-500 mb-3"></i>
+                            <p class="font-medium">Tải ảnh gốc lên</p>
+                        </div>
+                        <img id="preImg" class="hidden absolute inset-0 w-full h-full object-contain bg-slate-950">
+                    </div>
+                    <button id="genBtn" disabled class="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl font-bold shadow-xl disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                        <i class="fas fa-magic"></i> XỬ LÝ ẢNH AI
+                    </button>
+                </div>
+
+                <!-- Kết quả -->
+                <div class="space-y-4">
+                    <div class="glass-panel aspect-[3/4] rounded-3xl border border-slate-800 relative overflow-hidden flex items-center justify-center">
+                        <div id="waitInfo" class="text-center text-slate-600">
+                            <i class="fas fa-robot text-4xl mb-3"></i>
+                            <p>Kết quả hiển thị tại đây</p>
+                        </div>
+                        
+                        <div id="loading" class="hidden absolute inset-0 z-20 bg-slate-900/80 backdrop-blur-md flex flex-col items-center justify-center">
+                            <div class="loader mb-4"></div>
+                            <p class="text-blue-400 animate-pulse font-bold">AI ĐANG PHÂN TÍCH...</p>
+                        </div>
+                        
+                        <div id="scanner" class="scan-anim z-30"></div>
+                        <img id="resImg" class="hidden absolute inset-0 w-full h-full object-contain bg-slate-950">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <button id="dlBtn" disabled class="py-3 bg-emerald-600 rounded-xl font-bold disabled:opacity-20"><i class="fas fa-download mr-1"></i> Tải Về</button>
+                        <button id="pdfBtn" disabled class="py-3 bg-purple-600 rounded-xl font-bold disabled:opacity-20"><i class="fas fa-file-pdf mr-1"></i> Xuất PDF</button>
+                    </div>
+                    <button id="resetBtn" class="w-full py-2 text-slate-500 hover:text-white transition-colors text-sm"><i class="fas fa-undo mr-1"></i> Làm mới toàn bộ</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- SECURITY: ANTI-INSPECT ---
+        (function() {
+            // Chặn chuột phải
+            document.addEventListener('contextmenu', e => e.preventDefault());
+            
+            // Chặn phím tắt F12, Ctrl+Shift+I, U...
+            document.addEventListener('keydown', e => {
+                if (e.keyCode == 123 || 
+                    (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74 || e.keyCode == 67)) ||
+                    (e.ctrlKey && e.keyCode == 85)) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+
+            // Phát hiện debugger
+            setInterval(() => {
+                const start = performance.now();
+                debugger;
+                if (performance.now() - start > 100) {
+                    document.body.innerHTML = "<div style='color:white;text-align:center;margin-top:20%;font-family:sans-serif;'><h1>PHÁT HIỆN HÀNH VI XÂM NHẬP MÃ NGUỒN!</h1><p>Vui lòng đóng Console để tiếp tục sử dụng.</p></div>";
+                }
+            }, 1000);
+        })();
+
+        // --- CORE LOGIC ---
+        const _id = (d) => document.getElementById(d);
+        let _src = null;
+        let _out = null;
+
+        // Login Logic
+        _id('authForm').onsubmit = (e) => {
+            e.preventDefault();
+            const u = _id('u_name').value;
+            const p = _id('u_pass').value;
+            
+            if ((u === 'minhtai01' && p === 'minhtai') || (u.startsWith('tai') && p === u && u.length > 3)) {
+                _id('loginScreen').style.display = 'none';
+                _id('mainApp').style.display = 'flex';
+            } else {
+                _id('err_msg').classList.remove('hidden');
+                setTimeout(() => _id('err_msg').classList.add('hidden'), 3000);
+            }
+        };
+
+        _id('logoutBtn').onclick = () => location.reload();
+
+        // Image Handling
+        _id('dropZone').onclick = () => _id('fileInp').click();
+        _id('fileInp').onchange = (e) => {
+            const f = e.target.files[0];
+            if (!f) return;
+            const r = new FileReader();
+            r.onload = (ev) => {
+                _src = ev.target.result;
+                _id('preImg').src = _src;
+                _id('preImg').classList.remove('hidden');
+                _id('upInfo').classList.add('hidden');
+                _id('genBtn').disabled = false;
+            };
+            r.readAsDataURL(f);
+        };
+
+        // AI Engine
+        _id('genBtn').onclick = async () => {
+            _id('loading').classList.remove('hidden');
+            _id('scanner').style.display = 'block';
+            _id('genBtn').disabled = true;
+
+            try {
+                const raw = _src.split(',')[1];
+                const mime = _src.match(/data:(.*?);/)[1];
+                
+                const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [
+                                { text: "Professional ID photo: Transform clothing into a formal dark suit with white shirt and tie. KEEP the face, hair, and expression 100% IDENTICAL to the source image. Neutral studio background." },
+                                { inlineData: { mimeType: mime, data: raw } }
+                            ]
+                        }],
+                        generationConfig: { responseModalities: ['IMAGE'] }
+                    })
+                });
+
+                const json = await resp.json();
+                const imgData = json?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData;
+                
+                if (imgData) {
+                    _out = `data:${imgData.mimeType};base64,${imgData.data}`;
+                    _id('resImg').src = _out;
+                    _id('resImg').classList.remove('hidden');
+                    _id('waitInfo').classList.add('hidden');
+                    _id('dlBtn').disabled = _id('pdfBtn').disabled = false;
+                }
+            } catch (err) {
+                alert("Lỗi kết nối AI. Vui lòng thử lại.");
+            } finally {
+                _id('loading').classList.add('hidden');
+                _id('scanner').style.display = 'none';
+                _id('genBtn').disabled = false;
+            }
+        };
+
+        // Actions
+        _id('dlBtn').onclick = () => {
+            const a = document.createElement('a');
+            a.href = _out;
+            a.download = `minhtai_ai_photo.png`;
+            a.click();
+        };
+
+        _id('pdfBtn').onclick = () => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text("MINH TAI - AI ID PHOTO REPORT", 105, 20, {align: 'center'});
+            doc.addImage(_out, 'PNG', 20, 30, 40, 60); // 4x6
+            doc.addImage(_out, 'PNG', 70, 30, 30, 40); // 3x4
+            doc.save('minhtai_print.pdf');
+        };
+
+        _id('resetBtn').onclick = () => location.reload();
+    </script>
+</body>
+</html>
